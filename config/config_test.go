@@ -12,7 +12,9 @@ func TestNewConfigValidFile(t *testing.T) {
 		"logging": {"level": "info"}
 	}`
 	tmpFile := createTempFile(t, content)
-	defer os.Remove(tmpFile)
+	defer func() {
+		_ = os.Remove(tmpFile)
+	}()
 
 	cfg, err := NewConfig(tmpFile)
 	if err != nil {
@@ -44,7 +46,9 @@ func TestNewConfigInvalidJSON(t *testing.T) {
 		"logging": {"level": "info"}
 	}`
 	tmpFile := createTempFile(t, content)
-	defer os.Remove(tmpFile)
+	defer func() {
+		_ = os.Remove(tmpFile)
+	}()
 
 	_, err := NewConfig(tmpFile)
 	if err == nil {
@@ -61,6 +65,8 @@ func createTempFile(t testing.TB, content string) string {
 	if _, err := tmpFile.Write([]byte(content)); err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
-	tmpFile.Close()
+	func() {
+		_ = tmpFile.Close()
+	}()
 	return tmpFile.Name()
 }

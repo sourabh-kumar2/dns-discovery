@@ -1,10 +1,12 @@
+// Package main builds the binary.
 package main
 
 import (
 	"flag"
-	"github.com/sourabh-kumar2/dns-discovery/config"
 	"log"
 	"net"
+
+	"github.com/sourabh-kumar2/dns-discovery/config"
 )
 
 func main() {
@@ -28,7 +30,9 @@ func startUDPServer(server *config.Server) {
 	if err != nil {
 		log.Fatalf("Error starting UDP server on %s:%d - %v", server.Address, server.Port, err)
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	log.Printf("UDP server started on %s:%d", server.Address, server.Port)
 
