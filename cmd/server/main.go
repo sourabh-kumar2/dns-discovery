@@ -1,13 +1,20 @@
 package main
 
 import (
+	"flag"
 	"github.com/sourabh-kumar2/dns-discovery/config"
 	"log"
 	"net"
 )
 
 func main() {
-	cfg := config.NewConfig()
+	configPath := flag.String("config", "cmd/server/config.json", "Path to configuration file")
+	flag.Parse()
+
+	cfg, err := config.NewConfig(*configPath)
+	if err != nil {
+		log.Fatal(err)
+	}
 	startUDPServer(&cfg.Server)
 }
 
