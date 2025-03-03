@@ -9,6 +9,7 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 // Logger is the globally accessible zap.Logger instance.
@@ -56,4 +57,22 @@ func SyncLogger() {
 	if Logger != nil {
 		_ = Logger.Sync()
 	}
+}
+
+// CaptureLogs captures log output for testing.
+func CaptureLogs(f func()) []observer.LoggedEntry {
+	// Create an observer core to capture logs
+	core, logs := observer.New(zapcore.DebugLevel)
+	testLogger := zap.New(core)
+
+	// Swap global logger with test logger
+	oldLogger := Logger
+	Logger = testLogger
+	defer func() { Logger = oldLogger }()
+
+	// Run the function that generates logs
+	f()
+
+	// Return captured logs
+	return logs.All()
 }

@@ -52,3 +52,21 @@ func TestLoggerOutput(t *testing.T) {
 func contains(str, substr string) bool {
 	return bytes.Contains([]byte(str), []byte(substr))
 }
+
+func TestLogging(t *testing.T) {
+	logs := CaptureLogs(func() {
+		Logger.Info("Test log", zap.String("key", "value"))
+	})
+
+	found := false
+	for _, log := range logs {
+		if log.Message == "Test log" {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Errorf("Expected log message not found")
+	}
+}

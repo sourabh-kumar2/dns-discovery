@@ -2,6 +2,8 @@ package dns
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseDNSQuestion(t *testing.T) {
@@ -9,7 +11,7 @@ func TestParseDNSQuestion(t *testing.T) {
 		name      string
 		data      []byte
 		offset    int
-		expected  Question
+		expected  *Question
 		expectErr bool
 	}{
 		{
@@ -22,7 +24,7 @@ func TestParseDNSQuestion(t *testing.T) {
 				0x00, 0x01, // Class IN
 			},
 			offset: 0,
-			expected: Question{
+			expected: &Question{
 				DomainName: "example.com",
 				QType:      1,
 				QClass:     1,
@@ -42,7 +44,7 @@ func TestParseDNSQuestion(t *testing.T) {
 				0x00, 0x01, // Class IN
 			},
 			offset: 13,
-			expected: Question{
+			expected: &Question{
 				DomainName: "example.com",
 				QType:      1,
 				QClass:     1,
@@ -76,9 +78,7 @@ func TestParseDNSQuestion(t *testing.T) {
 			}
 
 			if err == nil {
-				if q.DomainName != tc.expected.DomainName || q.QType != tc.expected.QType || q.QClass != tc.expected.QClass {
-					t.Errorf("Parsed question mismatch. Got %+v, expected %+v", q, tc.expected)
-				}
+				assert.Equal(t, tc.expected, q)
 			}
 		})
 	}
