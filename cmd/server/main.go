@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -14,13 +15,14 @@ import (
 
 	"github.com/sourabh-kumar2/dns-discovery/config"
 	"github.com/sourabh-kumar2/dns-discovery/logger"
+	"go.uber.org/zap"
 )
 
 func init() {
 	if err := logger.InitLogger(); err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
-	logger.Logger.Warn("Initialized logger")
+	logger.Logger.Info("Initialized logger")
 }
 
 func main() {
@@ -29,7 +31,7 @@ func main() {
 
 	cfg, err := config.NewConfig(*configPath)
 	if err != nil {
-		log.Fatal(err)
+		logger.Logger.Fatal("Failed to initialize config", zap.Error(err))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -47,7 +49,7 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigChan
-	log.Printf("Received signal %v. Shutting down...", sig)
+	logger.Logger.Warn(fmt.Sprintf("Received signal %v. Shutting down...", sig))
 	cancel() // signal goroutines to stop
 
 	// Wait for all goroutines to finish, with a timeout if necessary.
@@ -59,9 +61,9 @@ func main() {
 
 	select {
 	case <-done:
-		log.Println("Shutdown complete.")
+		logger.Logger.Info("Shutdown complete.")
 	case <-time.After(10 * time.Second):
-		log.Println("Timeout during shutdown; forcing exit.")
+		logger.Logger.Info("Timeout during shutdown; forcing exit.")
 	}
 }
 
@@ -73,13 +75,20 @@ func startUDPServer(ctx context.Context, server *config.Server) {
 
 	conn, err := net.ListenUDP("udp", &addr)
 	if err != nil {
-		log.Fatalf("Error starting UDP server on %s:%d - %v", server.Address, server.Port, err)
+		logger.Logger.Fatal("Error starting UDP server",
+			zap.String("server", server.Address),
+			zap.Int("port", server.Port),
+			zap.Error(err),
+		)
 	}
 	defer func() {
 		_ = conn.Close()
 	}()
 
-	log.Printf("UDP server started on %s:%d", server.Address, server.Port)
+	logger.Logger.Info("UDP server started",
+		zap.String("server", server.Address),
+		zap.Int("port", server.Port),
+	)
 
 	handleIncomingMessages(ctx, conn)
 }
@@ -89,21 +98,21 @@ func handleIncomingMessages(ctx context.Context, conn *net.UDPConn) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Stopping message handling.")
+			logger.Logger.Warn("Stopping message handling.")
 			return
 		default:
 			n, addr, err := conn.ReadFromUDP(buf)
 			if err != nil {
-				log.Printf("Error reading from UDP connection: %v", err)
+				logger.Logger.Error("Error reading from UDP connection", zap.Error(err))
 				continue
 			}
 
-			log.Printf("Received %d bytes from %s", n, addr.IP)
+			logger.Logger.Info(fmt.Sprintf("Received %d bytes from %s", n, addr.IP))
 			go processPacket(ctx, buf[:n])
 		}
 	}
 }
 
 func processPacket(_ context.Context, buf []byte) {
-	log.Printf("Received %s bytes from UDP", buf)
+	logger.Logger.Info(fmt.Sprintf("Received %s bytes from UDP", buf))
 }

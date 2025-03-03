@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
+
+	"github.com/sourabh-kumar2/dns-discovery/logger"
+	"go.uber.org/zap"
 )
 
 // Config represents the entire application configuration. It contains the server
@@ -35,7 +37,7 @@ type Cache struct {
 //
 // path: The path to the configuration file.
 func NewConfig(path string) (*Config, error) {
-	log.Printf("Loading configuration from %s", path)
+	logger.Logger.Info("Loading configuration", zap.String("path", path))
 	data, err := readJSONFromFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)

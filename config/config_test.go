@@ -3,9 +3,12 @@ package config
 import (
 	"os"
 	"testing"
+
+	"github.com/sourabh-kumar2/dns-discovery/logger"
 )
 
 func TestNewConfigValidFile(t *testing.T) {
+	_ = logger.InitLogger()
 	content := `{
 		"server": {"address": "127.0.0.1", "port": 8053},
 		"cache": {"default_ttl": 300},
@@ -33,6 +36,7 @@ func TestNewConfigValidFile(t *testing.T) {
 }
 
 func TestNewConfigInvalidFile(t *testing.T) {
+	_ = logger.InitLogger()
 	_, err := NewConfig("nonexistent_file.json")
 	if err == nil {
 		t.Fatalf("Expected error for nonexistent file, got nil")
@@ -40,6 +44,8 @@ func TestNewConfigInvalidFile(t *testing.T) {
 }
 
 func TestNewConfigInvalidJSON(t *testing.T) {
+	_ = logger.InitLogger()
+
 	content := `{
 		"server": {"address": "127.0.0.1", "port": "not_an_int"},
 		"cache": {"default_ttl": 300},
