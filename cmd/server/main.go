@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/sourabh-kumar2/dns-discovery/config"
+	"github.com/sourabh-kumar2/dns-discovery/dns"
 	"github.com/sourabh-kumar2/dns-discovery/logger"
 	"go.uber.org/zap"
 )
@@ -62,7 +63,7 @@ func main() {
 	select {
 	case <-done:
 		logger.Logger.Info("Shutdown complete.")
-	case <-time.After(10 * time.Second):
+	case <-time.After(5 * time.Second):
 		logger.Logger.Info("Timeout during shutdown; forcing exit.")
 	}
 }
@@ -114,5 +115,5 @@ func handleIncomingMessages(ctx context.Context, conn *net.UDPConn) {
 }
 
 func processPacket(_ context.Context, buf []byte) {
-	logger.Logger.Info(fmt.Sprintf("Received %s bytes from UDP", buf))
+	dns.ParseQuery(buf)
 }
