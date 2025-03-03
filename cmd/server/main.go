@@ -13,7 +13,15 @@ import (
 	"time"
 
 	"github.com/sourabh-kumar2/dns-discovery/config"
+	"github.com/sourabh-kumar2/dns-discovery/logger"
 )
+
+func init() {
+	if err := logger.InitLogger(); err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	logger.Logger.Warn("Initialized logger")
+}
 
 func main() {
 	configPath := flag.String("config", "cmd/server/config.json", "Path to configuration file")
