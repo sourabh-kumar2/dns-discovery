@@ -34,6 +34,7 @@ func InitLogger() error {
 
 	if encoder == "console" {
 		cfg.Encoding = "console"
+		cfg.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	}
 	// Use ISO8601 format for the time encoder.
