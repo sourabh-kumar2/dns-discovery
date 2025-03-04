@@ -13,6 +13,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sourabh-kumar2/dns-discovery/discovery"
+	"github.com/sourabh-kumar2/dns-discovery/dns/response"
+
 	"github.com/google/uuid"
 	"github.com/sourabh-kumar2/dns-discovery/config"
 	"github.com/sourabh-kumar2/dns-discovery/dns"
@@ -110,12 +113,37 @@ func handleIncomingMessages(ctx context.Context, conn *net.UDPConn) {
 			}
 
 			logger.Log(zap.InfoLevel, fmt.Sprintf("Received %d bytes from %s", n, addr.IP))
-			go processPacket(ctx, buf[:n])
+			go processPacket(ctx, conn, addr, buf[:n])
 		}
 	}
 }
 
-func processPacket(ctx context.Context, buf []byte) {
-	logger.WithRequestID(ctx, uuid.NewString())
-	dns.ParseQuery(logger.WithRequestID(ctx, uuid.NewString()), buf)
+func processPacket(ctx context.Context, conn *net.UDPConn, addr *net.UDPAddr, buf []byte) {
+	ctx = logger.WithRequestID(ctx, uuid.NewString())
+	cache := discovery.NewCache()
+	cache.Set("example.com", 1, []byte{127, 0, 0, 2}, 300*time.Second)
+	cache.Set("example.com", 16, []byte("example text"), 300*time.Second)
+
+	header, questions, err := dns.ParseQuery(ctx, buf)
+	if err != nil {
+		logger.Log(zap.WarnLevel, "Error parsing query", zap.Error(err))
+	}
+
+	ctx = logger.WithTransactionID(ctx, header.TransactionID)
+
+	dnsResponse, err := response.BuildDNSResponse(ctx, questions, header, cache)
+	if err != nil {
+		logger.Log(zap.WarnLevel, "Error building DNS response", zap.Error(err))
+		return
+	}
+
+	fmt.Printf("Raw Response: %x\n", dnsResponse)
+	_, err = conn.WriteToUDP(dnsResponse, addr)
+	if err != nil {
+		logger.LogWithContext(ctx, zap.WarnLevel, "Error writing DNS response", zap.Error(err))
+		return
+	}
+	logger.LogWithContext(ctx, zap.InfoLevel, "DNS response written to UDP",
+		zap.Any("response", dnsResponse),
+	)
 }

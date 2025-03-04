@@ -40,8 +40,10 @@ func BuildDNSResponse(ctx context.Context, questions []dns.Question, header *dns
 		return nil, errors.New("no questions provided")
 	}
 
-	header.Flags |= 0x8000 // Set QR bit to 1.
+	header.Flags |= 0x8080 // Set QR bit to 1.
 	header.ANCount = 0     // Will be updated dynamically
+	header.ARCount = 0
+	header.NSCount = 0
 
 	var buf bytes.Buffer
 
@@ -90,17 +92,41 @@ func BuildDNSResponse(ctx context.Context, questions []dns.Question, header *dns
 			return nil, fmt.Errorf("failed to write QClass: %w", err)
 		}
 		if err := binary.Write(&buf, binary.BigEndian, uint32(300)); err != nil {
-			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write QType", zap.Error(err))
-			return nil, fmt.Errorf("failed to write QType: %w", err)
+			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write TTL", zap.Error(err))
+			return nil, fmt.Errorf("failed to write TTL: %w", err)
 		}
-		if err := binary.Write(&buf, binary.BigEndian, uint16(len(record))); err != nil { // Data length
-			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write QType", zap.Error(err))
-			return nil, fmt.Errorf("failed to write QType: %w", err)
+
+		var rdataBuf bytes.Buffer
+		if q.QType == 16 { // TXT Record
+			txtData := record
+			if len(txtData) > 255 {
+				return nil, fmt.Errorf("TXT record too long")
+			}
+
+			// TXT format requires a length byte before the actual string
+			rdataBuf.WriteByte(byte(len(txtData)))
+			rdataBuf.Write(txtData)
+		} else {
+			rdataBuf.Write(record)
 		}
-		buf.Write(record) // Data
+
+		// Write RDLENGTH
+		if err := binary.Write(&buf, binary.BigEndian, uint16(rdataBuf.Len())); err != nil {
+			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write RDLENGTH", zap.Error(err))
+			return nil, fmt.Errorf("failed to write RDLENGTH: %w", err)
+		}
+
+		buf.Write(rdataBuf.Bytes())
 	}
 
+	// Handle NXDOMAIN
+	if header.ANCount == 0 {
+		header.Flags |= 0x0003 // RCODE = 3 (NXDOMAIN)
+	}
+
+	// Update the ANCount in the header
 	bufBytes := buf.Bytes()
+	binary.BigEndian.PutUint16(bufBytes[2:], header.Flags)
 	binary.BigEndian.PutUint16(bufBytes[6:], header.ANCount)
 
 	logger.LogWithContext(ctx, zap.InfoLevel, "Successfully built DNS response")
@@ -117,6 +143,7 @@ func encodeDomainName(buf *bytes.Buffer, domain string, domainOffsets map[string
 		if err := binary.Write(buf, binary.BigEndian, uint16(pointer)); err != nil {
 			return fmt.Errorf("failed to write offset: %w", err)
 		}
+		return nil
 	}
 
 	currentOffset := buf.Len()
