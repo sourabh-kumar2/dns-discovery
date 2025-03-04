@@ -37,7 +37,7 @@ type Cache struct {
 //
 // path: The path to the configuration file.
 func NewConfig(path string) (*Config, error) {
-	logger.Logger.Info("Loading configuration", zap.String("path", path))
+	logger.Log(zap.InfoLevel, "Loading configuration", zap.String("path", path))
 	data, err := readJSONFromFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)

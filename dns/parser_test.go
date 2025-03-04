@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"context"
 	"testing"
 
 	"github.com/sourabh-kumar2/dns-discovery/logger"
@@ -57,7 +58,7 @@ func TestParseQuery(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			logs := logger.CaptureLogs(func() {
-				ParseQuery(tc.data)
+				ParseQuery(context.TODO(), tc.data)
 			})
 
 			// Verify expected log messages

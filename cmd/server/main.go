@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/sourabh-kumar2/dns-discovery/config"
 	"github.com/sourabh-kumar2/dns-discovery/dns"
 	"github.com/sourabh-kumar2/dns-discovery/logger"
@@ -23,7 +24,7 @@ func init() {
 	if err := logger.InitLogger(); err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
-	logger.Logger.Info("Initialized logger")
+	logger.Log(zap.InfoLevel, "Initialized logger")
 }
 
 func main() {
@@ -32,7 +33,7 @@ func main() {
 
 	cfg, err := config.NewConfig(*configPath)
 	if err != nil {
-		logger.Logger.Fatal("Failed to initialize config", zap.Error(err))
+		logger.Log(zap.FatalLevel, "Failed to initialize config", zap.Error(err))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -50,7 +51,7 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigChan
-	logger.Logger.Warn(fmt.Sprintf("Received signal %v. Shutting down...", sig))
+	logger.Log(zap.WarnLevel, fmt.Sprintf("Received signal %v. Shutting down...", sig))
 	cancel() // signal goroutines to stop
 
 	// Wait for all goroutines to finish, with a timeout if necessary.
@@ -62,9 +63,9 @@ func main() {
 
 	select {
 	case <-done:
-		logger.Logger.Info("Shutdown complete.")
+		logger.Log(zap.InfoLevel, "Shutdown complete.")
 	case <-time.After(5 * time.Second):
-		logger.Logger.Info("Timeout during shutdown; forcing exit.")
+		logger.Log(zap.InfoLevel, "Timeout during shutdown; forcing exit.")
 	}
 }
 
@@ -76,7 +77,7 @@ func startUDPServer(ctx context.Context, server *config.Server) {
 
 	conn, err := net.ListenUDP("udp", &addr)
 	if err != nil {
-		logger.Logger.Fatal("Error starting UDP server",
+		logger.Log(zap.FatalLevel, "Error starting UDP server",
 			zap.String("server", server.Address),
 			zap.Int("port", server.Port),
 			zap.Error(err),
@@ -86,7 +87,7 @@ func startUDPServer(ctx context.Context, server *config.Server) {
 		_ = conn.Close()
 	}()
 
-	logger.Logger.Info("UDP server started",
+	logger.Log(zap.InfoLevel, "UDP server started",
 		zap.String("server", server.Address),
 		zap.Int("port", server.Port),
 	)
@@ -99,21 +100,22 @@ func handleIncomingMessages(ctx context.Context, conn *net.UDPConn) {
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Logger.Warn("Stopping message handling.")
+			logger.Log(zap.WarnLevel, "Stopping message handling.")
 			return
 		default:
 			n, addr, err := conn.ReadFromUDP(buf)
 			if err != nil {
-				logger.Logger.Error("Error reading from UDP connection", zap.Error(err))
+				logger.Log(zap.ErrorLevel, "Error reading from UDP connection", zap.Error(err))
 				continue
 			}
 
-			logger.Logger.Info(fmt.Sprintf("Received %d bytes from %s", n, addr.IP))
+			logger.Log(zap.InfoLevel, fmt.Sprintf("Received %d bytes from %s", n, addr.IP))
 			go processPacket(ctx, buf[:n])
 		}
 	}
 }
 
-func processPacket(_ context.Context, buf []byte) {
-	dns.ParseQuery(buf)
+func processPacket(ctx context.Context, buf []byte) {
+	logger.WithRequestID(ctx, uuid.NewString())
+	dns.ParseQuery(logger.WithRequestID(ctx, uuid.NewString()), buf)
 }

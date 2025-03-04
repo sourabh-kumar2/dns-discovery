@@ -3,15 +3,17 @@
 package dns
 
 import (
+	"context"
+
 	"github.com/sourabh-kumar2/dns-discovery/logger"
 	"go.uber.org/zap"
 )
 
 // ParseQuery processes a raw DNS query packet.
 // It extracts the DNS header and all question sections, logging relevant details.
-func ParseQuery(data []byte) {
+func ParseQuery(ctx context.Context, data []byte) {
 	if len(data) < 12 {
-		logger.Logger.Error("Failed to parse DNS header",
+		logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to parse DNS header",
 			zap.String("reason", "packet too short"),
 		)
 		return
@@ -19,10 +21,11 @@ func ParseQuery(data []byte) {
 
 	header, err := parseDNSHeader(data)
 	if err != nil {
-		logger.Logger.Error("Failed to parse DNS header", zap.Error(err))
+		logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to parse DNS header", zap.Error(err))
 		return
 	}
-	logger.Logger.Debug("Parsed DNS header", zap.Any("header", header))
+	ctx = logger.WithTransactionID(ctx, header.TransactionID)
+	logger.LogWithContext(ctx, zap.DebugLevel, "Parsed DNS header", zap.Any("header", header))
 
 	offset := 12
 	var questions []Question
@@ -30,14 +33,14 @@ func ParseQuery(data []byte) {
 	for i := 0; i < int(header.QDCount); i++ {
 		question, newOffset, err := parseDNSQuestion(data, offset)
 		if err != nil {
-			logger.Logger.Error("Failed to parse DNS question", zap.Int("questionIndex", i+1), zap.Error(err))
+			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to parse DNS question", zap.Int("questionIndex", i+1), zap.Error(err))
 			return
 		}
 
-		logger.Logger.Debug("Parsed DNS question", zap.Int("questionIndex", i+1), zap.Any("question", question))
+		logger.LogWithContext(ctx, zap.DebugLevel, "Parsed DNS question", zap.Int("questionIndex", i+1), zap.Any("question", question))
 		questions = append(questions, *question)
 		offset = newOffset
 	}
 
-	logger.Logger.Info("Successfully parsed DNS query", zap.Int("questionsCount", len(questions)))
+	logger.LogWithContext(ctx, zap.InfoLevel, "Successfully parsed DNS query", zap.Int("questionsCount", len(questions)))
 }

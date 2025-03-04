@@ -4,6 +4,7 @@
 package logger
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -12,9 +13,16 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 )
 
-// Logger is the globally accessible zap.Logger instance.
+type contextKey string
+
+const (
+	requestIDKey     contextKey = "requestId"
+	transactionIDKey contextKey = "transactionId"
+)
+
+// logger is the globally accessible zap.Logger instance.
 // It must be initialized by calling InitLogger before any logging occurs.
-var Logger *zap.Logger
+var logger *zap.Logger
 
 var encoder = os.Getenv("ENCODER")
 
@@ -41,7 +49,7 @@ func InitLogger() error {
 	// Use ISO8601 format for the time encoder.
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	// Build the logger.
-	Logger, err = cfg.Build()
+	logger, err = cfg.Build()
 	if err != nil {
 		return fmt.Errorf("failed to initialize logger: %v", err)
 	}
@@ -54,9 +62,52 @@ func InitLogger() error {
 //
 //	defer logger.SyncLogger()
 func SyncLogger() {
-	if Logger != nil {
-		_ = Logger.Sync()
+	if logger != nil {
+		_ = logger.Sync()
 	}
+}
+
+// WithRequestID attaches a request ID to the context.
+func WithRequestID(ctx context.Context, reqID string) context.Context {
+	return context.WithValue(ctx, requestIDKey, reqID)
+}
+
+// WithTransactionID attaches a transaction ID to the context.
+func WithTransactionID(ctx context.Context, txID uint16) context.Context {
+	return context.WithValue(ctx, transactionIDKey, txID)
+}
+
+// RequestIDFromContext retrieves the request ID from context.
+func RequestIDFromContext(ctx context.Context) string {
+	if v, ok := ctx.Value(requestIDKey).(string); ok {
+		return v
+	}
+	return ""
+}
+
+// TransactionIDFromContext retrieves the transaction ID from context.
+func TransactionIDFromContext(ctx context.Context) uint16 {
+	if v, ok := ctx.Value(transactionIDKey).(uint16); ok {
+		return v
+	}
+	return 0
+}
+
+// Log wrapper for zap.Log.
+func Log(level zapcore.Level, msg string, fields ...zap.Field) {
+	logger.Log(level, msg, fields...)
+}
+
+// LogWithContext automatically extracts request and transaction IDs and logs them.
+func LogWithContext(ctx context.Context, level zapcore.Level, msg string, fields ...zap.Field) {
+	if reqID := RequestIDFromContext(ctx); reqID != "" {
+		fields = append(fields, zap.Any("requestId", reqID))
+	}
+	if txID := TransactionIDFromContext(ctx); txID != 0 {
+		fields = append(fields, zap.Any("transactionId", txID))
+	}
+
+	Log(level, msg, fields...)
 }
 
 // CaptureLogs captures log output for testing.
@@ -66,9 +117,9 @@ func CaptureLogs(f func()) []observer.LoggedEntry {
 	testLogger := zap.New(core)
 
 	// Swap global logger with test logger
-	oldLogger := Logger
-	Logger = testLogger
-	defer func() { Logger = oldLogger }()
+	oldLogger := logger
+	logger = testLogger
+	defer func() { logger = oldLogger }()
 
 	// Run the function that generates logs
 	f()

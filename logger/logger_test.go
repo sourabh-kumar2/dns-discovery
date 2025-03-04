@@ -14,7 +14,7 @@ func TestLoggerInitialization(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize logger: %v", err)
 	}
-	if Logger == nil {
+	if logger == nil {
 		t.Fatal("Logger should not be nil")
 	}
 }
@@ -55,7 +55,7 @@ func contains(str, substr string) bool {
 
 func TestLogging(t *testing.T) {
 	logs := CaptureLogs(func() {
-		Logger.Info("Test log", zap.String("key", "value"))
+		logger.Info("Test log", zap.String("key", "value"))
 	})
 
 	found := false
