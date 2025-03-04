@@ -71,8 +71,8 @@ func BuildDNSResponse(ctx context.Context, questions []dns.Question, header *dns
 	}
 
 	for _, q := range questions {
-		record, ok := cache.Get(q.DomainName, q.QType)
-		if !ok {
+		record := cache.Get(q.DomainName, q.QType)
+		if record == nil {
 			logger.LogWithContext(ctx, zap.InfoLevel, "No record found for domain name: NXDOMAIN", zap.String("domain", q.DomainName))
 			continue
 		}
@@ -91,14 +91,14 @@ func BuildDNSResponse(ctx context.Context, questions []dns.Question, header *dns
 			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write QClass", zap.Error(err))
 			return nil, fmt.Errorf("failed to write QClass: %w", err)
 		}
-		if err := binary.Write(&buf, binary.BigEndian, uint32(300)); err != nil {
+		if err := binary.Write(&buf, binary.BigEndian, uint32(record.TTL)); err != nil {
 			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write TTL", zap.Error(err))
 			return nil, fmt.Errorf("failed to write TTL: %w", err)
 		}
 
 		var rdataBuf bytes.Buffer
 		if q.QType == 16 { // TXT Record
-			txtData := record
+			txtData := record.Value
 			if len(txtData) > 255 {
 				return nil, fmt.Errorf("TXT record too long")
 			}
@@ -107,7 +107,7 @@ func BuildDNSResponse(ctx context.Context, questions []dns.Question, header *dns
 			rdataBuf.WriteByte(byte(len(txtData)))
 			rdataBuf.Write(txtData)
 		} else {
-			rdataBuf.Write(record)
+			rdataBuf.Write(record.Value)
 		}
 
 		// Write RDLENGTH
