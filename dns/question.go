@@ -2,7 +2,28 @@ package dns
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
+)
+
+var (
+	validQTypes = map[uint16]bool{
+		1:   true, // A
+		2:   true, // NS
+		5:   true, // CNAME
+		6:   true, // SOA
+		15:  true, // MX
+		16:  true, // TXT
+		28:  true, // AAAA
+		255: true, // ANY (Wildcard Query)
+	}
+
+	validQClasses = map[uint16]bool{
+		1:   true, // IN (Internet)
+		3:   true, // CH (Chaosnet)
+		4:   true, // HS (Hesiod)
+		255: true, // ANY (Wildcard Query)
+	}
 )
 
 // Question represents a DNS question section.
@@ -42,11 +63,17 @@ func parseDNSQuestion(data []byte, offset int) (*Question, int, error) {
 
 	// Ensure enough bytes remain for QType and QClass
 	if offset+4 > maxLen {
-		return nil, 0, fmt.Errorf("incomplete question section")
+		return nil, 0, errors.New("incomplete question section")
 	}
 
 	qType := binary.BigEndian.Uint16(data[offset : offset+2])
+	if !validQTypes[qType] {
+		return nil, 0, errors.New("invalid QType")
+	}
 	qClass := binary.BigEndian.Uint16(data[offset+2 : offset+4])
+	if !validQClasses[qClass] {
+		return nil, 0, errors.New("invalid QClass")
+	}
 	offset += 4
 
 	return &Question{
@@ -71,61 +98,81 @@ func parseDNSQuestion(data []byte, offset int) (*Question, int, error) {
 //   - The next offset position after reading the domain name.
 //   - An error if the domain name is malformed, contains an invalid pointer, or forms a pointer loop.
 func decodeDomainName(data []byte, offset int) ([]byte, int, error) {
-	var domainName []byte
-	originalOffset := offset
-	maxLen := len(data)
-	jumped := false
-	visited := make(map[int]bool) // Track visited offsets
+	// Ensure offset is within bounds.
+	if offset >= len(data) {
+		return nil, 0, fmt.Errorf("offset out of range")
+	}
 
-	for offset < maxLen {
-		// Detect infinite loop by checking visited offsets
+	// If the domain name is the root domain, it is represented by a single 0 byte.
+	if data[offset] == 0x00 {
+		return []byte{}, offset + 1, nil
+	}
+
+	returnOffset := offset        // We will update this only on the first pointer jump.
+	var domain []byte             // Holds the assembled domain name.
+	visited := make(map[int]bool) // Tracks visited offsets to prevent loops.
+	jumped := false               // Indicates if a pointer jump has occurred.
+
+	for {
+		// Check bounds.
+		if offset >= len(data) {
+			return nil, 0, fmt.Errorf("offset out of range")
+		}
+
+		// Detect infinite loop.
 		if visited[offset] {
 			return nil, 0, fmt.Errorf("detected pointer loop at offset %d", offset)
 		}
 		visited[offset] = true
 
 		length := int(data[offset])
-		if length == 0 { // End of domain name
-			offset++
+		// End of domain name.
+		if length == 0 {
+			offset++ // Move past the null terminator.
 			break
 		}
 
-		// Handle compression (pointer)
+		// Check if this is a pointer (first two bits are set).
 		if length&0xC0 == 0xC0 {
-			if offset+1 >= maxLen {
-				return nil, 0, fmt.Errorf("invalid pointer")
+			// A pointer uses two bytes.
+			if offset+1 >= len(data) {
+				return nil, 0, fmt.Errorf("invalid pointer at offset %d", offset)
 			}
+			// Extract pointer offset (mask with 0x3FFF to remove the two high bits).
 			pointer := int(binary.BigEndian.Uint16(data[offset:offset+2]) & 0x3FFF)
-			if pointer >= maxLen {
+			if pointer >= len(data) {
 				return nil, 0, fmt.Errorf("pointer out of range")
 			}
-
-			// Check if we've already jumped
-			if jumped {
-				return nil, 0, fmt.Errorf("multiple jumps in compressed domain name")
+			// If this is the first pointer jump, record the return offset.
+			if !jumped {
+				returnOffset = offset + 2
 			}
-
-			offset = pointer
 			jumped = true
+			// Jump to the pointer offset.
+			offset = pointer
 			continue
 		}
 
-		// Check for valid length
-		if offset+length > maxLen {
-			return nil, 0, fmt.Errorf("invalid label length")
+		// For a normal label, move past the length byte.
+		offset++
+		// Validate that the label fits in the data.
+		if offset+length > len(data) {
+			return nil, 0, fmt.Errorf("invalid label length at offset %d", offset-1)
 		}
+		// Append the label to our domain.
+		domain = append(domain, data[offset:offset+length]...)
+		offset += length
 
-		// Append label
-		if len(domainName) > 0 {
-			domainName = append(domainName, '.')
+		// Append a dot if the next byte is not the end of the domain or a pointer.
+		if offset < len(data) && data[offset] != 0 && (data[offset]&0xC0) != 0xC0 {
+			domain = append(domain, '.')
 		}
-		domainName = append(domainName, data[offset+1:offset+1+length]...)
-		offset += length + 1
 	}
 
-	// If we followed a pointer, return the original offset for proper QType reading
+	// Return the domain and the correct offset:
+	// If we jumped via a pointer, use returnOffset; otherwise, use the current offset.
 	if jumped {
-		return domainName, originalOffset + 2, nil
+		return domain, returnOffset, nil
 	}
-	return domainName, offset, nil
+	return domain, offset, nil
 }

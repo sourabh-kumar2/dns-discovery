@@ -68,6 +68,63 @@ func TestParseDNSQuestion(t *testing.T) {
 			offset:    0,
 			expectErr: true,
 		},
+		{
+			name: "Root Domain Name",
+			data: []byte{0x00, 0x00, 0x01, 0x00, 0x01},
+			expected: &Question{
+				DomainName: "",
+				QType:      1,
+				QClass:     1,
+			},
+		},
+		{
+			name: "Label Too Long",
+			data: []byte{
+				0x4F, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+				0x01, 'c', 0x00, 0x00, 0x01, 0x00, 0x01,
+			},
+			expectErr: true,
+		},
+		{
+			name: "Domain Name Too Long",
+			data: func() []byte {
+				d := make([]byte, 256)
+				d[0] = 0x3F
+				d[64] = 0x3F
+				d[128] = 0x3F
+				d[192] = 0x3F
+				return d
+			}(),
+			expectErr: true,
+		},
+		{
+			name: "Invalid QType",
+			data: []byte{
+				0x07, 'e', 'x', 'a', 'm', 'p', 'l', 'e',
+				0x03, 'c', 'o', 'm', 0x00,
+				0xFF, 0xFF,
+				0x00, 0x01,
+			},
+			expectErr: true,
+		},
+		{
+			name: "Invalid QClass",
+			data: []byte{
+				0x07, 'e', 'x', 'a', 'm', 'p', 'l', 'e',
+				0x03, 'c', 'o', 'm', 0x00,
+				0x00, 0x01,
+				0x01, 0xFF,
+			},
+			expectErr: true,
+		},
+		{
+			name: "Malformed Question",
+			data: []byte{
+				0x07, 'e', 'x', 'a', 'm', 'p', 'l', 'e',
+				0x03, 'c', 'o', 'm', 0x00,
+			},
+			expectErr: true,
+		},
 	}
 
 	for _, tc := range tcs {
