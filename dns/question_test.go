@@ -10,7 +10,7 @@ func TestParseDNSQuestion(t *testing.T) {
 	tcs := []struct {
 		name      string
 		data      []byte
-		offset    int
+		offset    uint16
 		expected  *Question
 		expectErr bool
 	}{
@@ -145,7 +145,7 @@ func TestDecodeDomainName(t *testing.T) {
 	tcs := []struct {
 		name      string
 		data      []byte
-		offset    int
+		offset    uint16
 		expectErr bool
 		expected  string
 	}{

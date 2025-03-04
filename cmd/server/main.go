@@ -113,16 +113,16 @@ func handleIncomingMessages(ctx context.Context, conn *net.UDPConn) {
 			}
 
 			logger.Log(zap.InfoLevel, fmt.Sprintf("Received %d bytes from %s", n, addr.IP))
-			go processPacket(ctx, conn, addr, buf[:n])
+			cache := discovery.NewCache()
+			cache.Set("example.com", 1, []byte{127, 0, 0, 2}, 300*time.Second)
+			cache.Set("example.com", 16, []byte("example text"), 300*time.Second)
+			go processPacket(ctx, conn, addr, cache, buf[:n])
 		}
 	}
 }
 
-func processPacket(ctx context.Context, conn *net.UDPConn, addr *net.UDPAddr, buf []byte) {
+func processPacket(ctx context.Context, conn *net.UDPConn, addr *net.UDPAddr, cache *discovery.Cache, buf []byte) {
 	ctx = logger.WithRequestID(ctx, uuid.NewString())
-	cache := discovery.NewCache()
-	cache.Set("example.com", 1, []byte{127, 0, 0, 2}, 300*time.Second)
-	cache.Set("example.com", 16, []byte("example text"), 300*time.Second)
 
 	header, questions, err := dns.ParseQuery(ctx, buf)
 	if err != nil {
@@ -137,13 +137,10 @@ func processPacket(ctx context.Context, conn *net.UDPConn, addr *net.UDPAddr, bu
 		return
 	}
 
-	fmt.Printf("Raw Response: %x\n", dnsResponse)
 	_, err = conn.WriteToUDP(dnsResponse, addr)
 	if err != nil {
-		logger.LogWithContext(ctx, zap.WarnLevel, "Error writing DNS response", zap.Error(err))
+		logger.LogWithContext(ctx, zap.ErrorLevel, "Error writing DNS response", zap.Error(err))
 		return
 	}
-	logger.LogWithContext(ctx, zap.InfoLevel, "DNS response written to UDP",
-		zap.Any("response", dnsResponse),
-	)
+	logger.LogWithContext(ctx, zap.InfoLevel, "DNS response written to UDP")
 }

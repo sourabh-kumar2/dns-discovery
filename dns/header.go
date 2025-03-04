@@ -37,7 +37,7 @@ type Header struct {
 // - A pointer to the parsed Header struct if successful.
 // - An error if the packet is too short or has an invalid QDCount.
 func parseDNSHeader(data []byte) (*Header, error) {
-	if len(data) < 12 {
+	if len(data) < headerLength {
 		return nil, fmt.Errorf("invalid DNS packet, too short")
 	}
 

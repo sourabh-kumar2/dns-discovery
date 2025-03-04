@@ -51,8 +51,8 @@ type Question struct {
 // - A pointer to the parsed Question struct.
 // - The new offset after parsing.
 // - An error if parsing fails.
-func parseDNSQuestion(data []byte, offset int) (*Question, int, error) {
-	maxLen := len(data)
+func parseDNSQuestion(data []byte, offset uint16) (*Question, uint16, error) {
+	maxLen := uint16(len(data))
 
 	domainName, newOffset, err := decodeDomainName(data, offset)
 	if err != nil {
@@ -97,9 +97,9 @@ func parseDNSQuestion(data []byte, offset int) (*Question, int, error) {
 //   - A byte slice representing the decoded domain name (without the trailing null byte).
 //   - The next offset position after reading the domain name.
 //   - An error if the domain name is malformed, contains an invalid pointer, or forms a pointer loop.
-func decodeDomainName(data []byte, offset int) ([]byte, int, error) {
+func decodeDomainName(data []byte, offset uint16) ([]byte, uint16, error) {
 	// Ensure offset is within bounds.
-	if offset >= len(data) {
+	if offset >= uint16(len(data)) {
 		return nil, 0, fmt.Errorf("offset out of range")
 	}
 
@@ -108,24 +108,24 @@ func decodeDomainName(data []byte, offset int) ([]byte, int, error) {
 		return []byte{}, offset + 1, nil
 	}
 
-	returnOffset := offset        // We will update this only on the first pointer jump.
-	var domain []byte             // Holds the assembled domain name.
-	visited := make(map[int]bool) // Tracks visited offsets to prevent loops.
-	jumped := false               // Indicates if a pointer jump has occurred.
+	returnOffset := offset               // We will update this only on the first pointer jump.
+	var domain []byte                    // Holds the assembled domain name.
+	visited := make(map[uint16]struct{}) // Tracks visited offsets to prevent loops.
+	jumped := false                      // Indicates if a pointer jump has occurred.
 
 	for {
 		// Check bounds.
-		if offset >= len(data) {
+		if offset >= uint16(len(data)) {
 			return nil, 0, fmt.Errorf("offset out of range")
 		}
 
 		// Detect infinite loop.
-		if visited[offset] {
+		if _, ok := visited[offset]; ok {
 			return nil, 0, fmt.Errorf("detected pointer loop at offset %d", offset)
 		}
-		visited[offset] = true
+		visited[offset] = struct{}{}
 
-		length := int(data[offset])
+		length := uint16(data[offset])
 		// End of domain name.
 		if length == 0 {
 			offset++ // Move past the null terminator.
@@ -135,12 +135,12 @@ func decodeDomainName(data []byte, offset int) ([]byte, int, error) {
 		// Check if this is a pointer (first two bits are set).
 		if length&0xC0 == 0xC0 {
 			// A pointer uses two bytes.
-			if offset+1 >= len(data) {
+			if offset+1 >= uint16(len(data)) {
 				return nil, 0, fmt.Errorf("invalid pointer at offset %d", offset)
 			}
 			// Extract pointer offset (mask with 0x3FFF to remove the two high bits).
-			pointer := int(binary.BigEndian.Uint16(data[offset:offset+2]) & 0x3FFF)
-			if pointer >= len(data) {
+			pointer := binary.BigEndian.Uint16(data[offset:offset+2]) & 0x3FFF
+			if pointer >= uint16(len(data)) {
 				return nil, 0, fmt.Errorf("pointer out of range")
 			}
 			// If this is the first pointer jump, record the return offset.
@@ -156,7 +156,7 @@ func decodeDomainName(data []byte, offset int) ([]byte, int, error) {
 		// For a normal label, move past the length byte.
 		offset++
 		// Validate that the label fits in the data.
-		if offset+length > len(data) {
+		if offset+length > uint16(len(data)) {
 			return nil, 0, fmt.Errorf("invalid label length at offset %d", offset-1)
 		}
 		// Append the label to our domain.
@@ -164,7 +164,7 @@ func decodeDomainName(data []byte, offset int) ([]byte, int, error) {
 		offset += length
 
 		// Append a dot if the next byte is not the end of the domain or a pointer.
-		if offset < len(data) && data[offset] != 0 && (data[offset]&0xC0) != 0xC0 {
+		if offset < uint16(len(data)) && data[offset] != 0 && (data[offset]&0xC0) != 0xC0 {
 			domain = append(domain, '.')
 		}
 	}

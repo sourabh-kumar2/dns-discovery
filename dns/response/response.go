@@ -20,6 +20,17 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	// QRResponse Query Response flag.
+	QRResponse = 0x8000
+
+	// RANotAvailable Recursion Available flag.
+	RANotAvailable = 0x0080
+
+	// NXDomain NXDOMAIN response code.
+	NXDomain = 0x0003
+)
+
 // BuildDNSResponse constructs a DNS response packet based on the query and header.
 //
 // This function does the following:
@@ -40,8 +51,8 @@ func BuildDNSResponse(ctx context.Context, questions []dns.Question, header *dns
 		return nil, errors.New("no questions provided")
 	}
 
-	header.Flags |= 0x8080 // Set QR bit to 1.
-	header.ANCount = 0     // Will be updated dynamically
+	header.Flags |= QRResponse | RANotAvailable
+	header.ANCount = 0 // Will be updated dynamically
 	header.ARCount = 0
 	header.NSCount = 0
 
@@ -119,9 +130,8 @@ func BuildDNSResponse(ctx context.Context, questions []dns.Question, header *dns
 		buf.Write(rdataBuf.Bytes())
 	}
 
-	// Handle NXDOMAIN
 	if header.ANCount == 0 {
-		header.Flags |= 0x0003 // RCODE = 3 (NXDOMAIN)
+		header.Flags |= NXDomain
 	}
 
 	// Update the ANCount in the header
@@ -129,7 +139,9 @@ func BuildDNSResponse(ctx context.Context, questions []dns.Question, header *dns
 	binary.BigEndian.PutUint16(bufBytes[2:], header.Flags)
 	binary.BigEndian.PutUint16(bufBytes[6:], header.ANCount)
 
-	logger.LogWithContext(ctx, zap.InfoLevel, "Successfully built DNS response")
+	logger.LogWithContext(ctx, zap.DebugLevel, "Successfully built DNS response",
+		zap.String("raw response", fmt.Sprintf("%x", bufBytes)),
+	)
 	return bufBytes, nil
 }
 

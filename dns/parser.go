@@ -11,10 +11,15 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	// headerLength The DNS header consists of 12 bytes and contains important fields fixed 12.
+	headerLength = 12
+)
+
 // ParseQuery processes a raw DNS query packet.
 // It extracts the DNS header and all question sections, logging relevant details.
 func ParseQuery(ctx context.Context, data []byte) (*Header, []Question, error) {
-	if len(data) < 12 {
+	if len(data) < headerLength {
 		logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to parse DNS header",
 			zap.String("reason", "packet too short"),
 		)
@@ -29,7 +34,7 @@ func ParseQuery(ctx context.Context, data []byte) (*Header, []Question, error) {
 	ctx = logger.WithTransactionID(ctx, header.TransactionID)
 	logger.LogWithContext(ctx, zap.DebugLevel, "Parsed DNS header", zap.Any("header", header))
 
-	offset := 12
+	offset := uint16(headerLength)
 	var questions []Question
 
 	for i := 0; i < int(header.QDCount); i++ {
@@ -44,6 +49,6 @@ func ParseQuery(ctx context.Context, data []byte) (*Header, []Question, error) {
 		offset = newOffset
 	}
 
-	logger.LogWithContext(ctx, zap.InfoLevel, "Successfully parsed DNS query", zap.Int("questionsCount", len(questions)))
+	logger.LogWithContext(ctx, zap.DebugLevel, "Successfully parsed DNS query", zap.Int("questionsCount", len(questions)))
 	return header, questions, nil
 }
