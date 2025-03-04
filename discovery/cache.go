@@ -1,13 +1,19 @@
-// Package discovery blah blah.
+// Package discovery provides an in-memory DNS cache for service discovery.
+// It allows storing and retrieving DNS records with TTL support, ensuring
+// responses are dynamically updated based on cached entries.
+//
+// This package is primarily used for resolving service endpoints by mapping
+// domain names to predefined responses, such as TXT or A records.
 package discovery
 
 import (
 	"context"
 	"fmt"
-	"github.com/sourabh-kumar2/dns-discovery/logger"
-	"go.uber.org/zap"
 	"sync"
 	"time"
+
+	"github.com/sourabh-kumar2/dns-discovery/logger"
+	"go.uber.org/zap"
 )
 
 // Record represents a cached DNS response.
