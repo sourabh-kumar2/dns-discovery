@@ -17,24 +17,16 @@ import (
 	"go.uber.org/zap"
 )
 
-func init() {
-	if err := logger.InitLogger(); err != nil {
-		log.Fatalf("Failed to initialize logger: %v", err)
-	}
-	logger.Log(zap.InfoLevel, "Initialized logger")
-}
-
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	flg := parseFlags()
 
-	logger.Log(zap.InfoLevel, "Reading configuration",
-		zap.String("address", flg.address),
-		zap.Int("port", flg.port),
-		zap.Bool("debug", flg.debug),
-	)
+	if err := logger.InitLogger(flg.debug); err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	cache := discovery.NewCache()
 	cache.Set("example.com", 1, []byte{127, 0, 0, 2}, 300*time.Second)
@@ -57,4 +49,6 @@ func main() {
 	cancel()
 
 	srv.Stop()
+
+	logger.SyncLogger()
 }

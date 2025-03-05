@@ -9,7 +9,7 @@ import (
 )
 
 func TestParseQuery(t *testing.T) {
-	err := logger.InitLogger()
+	err := logger.InitLogger(true)
 	if err != nil {
 		t.Fatal(err)
 	}

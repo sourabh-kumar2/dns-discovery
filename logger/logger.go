@@ -18,13 +18,12 @@ type contextKey string
 const (
 	requestIDKey     contextKey = "requestId"
 	transactionIDKey contextKey = "transactionId"
+	logFilePath                 = "dns-server.log"
 )
 
 // logger is the globally accessible zap.Logger instance.
 // It must be initialized by calling InitLogger before any logging occurs.
 var logger *zap.Logger
-
-var encoder = os.Getenv("ENCODER")
 
 // InitLogger initializes the production logger using zap.NewProduction and assigns it to Logger.
 // It returns an error if the logger cannot be initialized.
@@ -35,25 +34,53 @@ var encoder = os.Getenv("ENCODER")
 //	if err != nil {
 //	    // Handle error appropriately
 //	}
-func InitLogger() error {
-	var err error
-	cfg := zap.NewProductionConfig()
-	// Set the key for timestamps in the output.
-	cfg.EncoderConfig.TimeKey = "timestamp"
-
-	if encoder == "console" {
-		cfg.Encoding = "console"
-		cfg.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
-		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+func InitLogger(debugMode bool) error {
+	// Configure common encoder settings.
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:      "timestamp",
+		LevelKey:     "level",
+		MessageKey:   "msg",
+		CallerKey:    "caller",
+		EncodeTime:   zapcore.ISO8601TimeEncoder,
+		EncodeLevel:  zapcore.CapitalLevelEncoder,
+		EncodeCaller: zapcore.ShortCallerEncoder,
 	}
-	// Use ISO8601 format for the time encoder.
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	// Build the logger.
-	logger, err = cfg.Build()
+
+	logFile, err := getLogFile(debugMode)
 	if err != nil {
 		return fmt.Errorf("failed to initialize logger: %v", err)
 	}
+
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(encoderConfig),
+		zapcore.AddSync(logFile),
+		zap.InfoLevel,
+	)
+	if debugMode {
+		encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		core = zapcore.NewCore(
+			zapcore.NewConsoleEncoder(encoderConfig),
+			zapcore.AddSync(logFile),
+			zap.DebugLevel,
+		)
+	}
+
+	logger = zap.New(zapcore.NewTee(core), zap.AddCaller())
+	Log(zap.InfoLevel, "Initialized logger", zap.Bool("debugMode", debugMode))
 	return nil
+}
+
+func getLogFile(debugMode bool) (*os.File, error) {
+	if debugMode {
+		return os.Stdout, nil
+	}
+
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open log file: %w", err)
+	}
+
+	return logFile, nil
 }
 
 // SyncLogger flushes any buffered log entries.
@@ -95,11 +122,14 @@ func TransactionIDFromContext(ctx context.Context) uint16 {
 
 // Log wrapper for zap.Log.
 func Log(level zapcore.Level, msg string, fields ...zap.Field) {
-	logger.Log(level, msg, fields...)
+	callerSkipLogger := logger.WithOptions(zap.AddCallerSkip(1))
+	callerSkipLogger.Log(level, msg, fields...)
 }
 
 // LogWithContext automatically extracts request and transaction IDs and logs them.
 func LogWithContext(ctx context.Context, level zapcore.Level, msg string, fields ...zap.Field) {
+	callerSkipLogger := logger.WithOptions(zap.AddCallerSkip(1))
+
 	if reqID := RequestIDFromContext(ctx); reqID != "" {
 		fields = append(fields, zap.Any("requestId", reqID))
 	}
@@ -107,7 +137,7 @@ func LogWithContext(ctx context.Context, level zapcore.Level, msg string, fields
 		fields = append(fields, zap.Any("transactionId", txID))
 	}
 
-	Log(level, msg, fields...)
+	callerSkipLogger.Log(level, msg, fields...)
 }
 
 // CaptureLogs captures log output for testing.

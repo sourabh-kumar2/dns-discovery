@@ -10,7 +10,7 @@ import (
 
 // TestLoggerInitialization ensures that the logger initializes correctly.
 func TestLoggerInitialization(t *testing.T) {
-	err := InitLogger()
+	err := InitLogger(true)
 	if err != nil {
 		t.Fatalf("Failed to initialize logger: %v", err)
 	}

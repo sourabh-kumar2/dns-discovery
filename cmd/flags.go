@@ -1,6 +1,9 @@
 package main
 
-import "flag"
+import (
+	"flag"
+	"log"
+)
 
 type flags struct {
 	address string
@@ -16,5 +19,13 @@ func parseFlags() *flags {
 	flag.BoolVar(&f.debug, "debug", false, "Enable debug logging (set flag without value to enable)")
 
 	flag.Parse()
+
+	log.Printf(
+		"\naddress: %s\nport: %d\ndebug: %t\n",
+		f.address,
+		f.port,
+		f.debug,
+	)
+
 	return f
 }
