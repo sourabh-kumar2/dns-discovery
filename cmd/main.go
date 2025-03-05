@@ -28,9 +28,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cache := discovery.NewCache()
-	cache.Set("example.com", 1, []byte{127, 0, 0, 2}, 300*time.Second)
-	cache.Set("example.com", 16, []byte("example text"), 300*time.Second)
+	cache := discovery.NewCache(flg.filename, time.Duration(flg.interval)*time.Second)
 	resolver := dns.NewResolver(cache)
 
 	srv, err := server.NewServer(flg.address, flg.port, resolver)

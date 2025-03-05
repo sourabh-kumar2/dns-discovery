@@ -9,14 +9,14 @@ import (
 )
 
 func TestNewResolver(t *testing.T) {
-	cache := discovery.NewCache()
+	cache := discovery.NewTestCache()
 	resolver := NewResolver(cache)
 
 	assert.NotNil(t, resolver, "Resolver instance should not be nil")
 }
 
 func TestResolverResolveValidQuery(t *testing.T) {
-	cache := discovery.NewCache()
+	cache := discovery.NewTestCache()
 	resolver := NewResolver(cache)
 
 	// Preload cache with a test record
@@ -38,7 +38,7 @@ func TestResolverResolveValidQuery(t *testing.T) {
 }
 
 func TestResolverResolveInvalidQuery(t *testing.T) {
-	cache := discovery.NewCache()
+	cache := discovery.NewTestCache()
 	resolver := NewResolver(cache)
 
 	// Simulated invalid query (too short)
@@ -52,7 +52,7 @@ func TestResolverResolveInvalidQuery(t *testing.T) {
 }
 
 func TestResolverResolveNXDOMAIN(t *testing.T) {
-	cache := discovery.NewCache()
+	cache := discovery.NewTestCache()
 	resolver := NewResolver(cache)
 
 	// Simulated valid DNS query for a non-existent domain

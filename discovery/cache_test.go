@@ -8,7 +8,7 @@ import (
 )
 
 func TestCache(t *testing.T) {
-	cache := NewCache()
+	cache := NewTestCache()
 
 	tcs := []struct {
 		name           string

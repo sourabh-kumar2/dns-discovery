@@ -114,7 +114,7 @@ func TestBuildDNSResponse(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			logger.CaptureLogs(func() {
-				cache := discovery.NewCache()
+				cache := discovery.NewTestCache()
 				tc.cacheSetup(cache)
 
 				resp, err := BuildDNSResponse(context.Background(), tc.questions, tc.header, cache)

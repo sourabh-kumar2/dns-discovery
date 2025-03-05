@@ -1,0 +1,13 @@
+[
+  { "domain": "example.com", "qtype": 1, "value": "192.168.1.1", "ttl": 300 },
+  { "domain": "abc.com", "qtype": 1, "value": "acc", "ttl": 300 },
+  { "domain": "db.service.local", "qtype": 1, "value": "10.0.0.5", "ttl": 300 },
+  { "domain": "cache.service.local", "qtype": 1, "value": "10.0.0.10", "ttl": 300 },
+  { "domain": "kafka.broker.app1", "qtype": 16, "value": "broker1:9092,broker2:9092", "ttl": 600 },
+  { "domain": "kafka.broker.app2", "qtype": 16, "value": "broker3:9092,broker4:9092", "ttl": 600 },
+  { "domain": "feature.auth.enabled", "qtype": 16, "value": "true", "ttl": 3600 },
+  { "domain": "feature.payment.newflow", "qtype": 16, "value": "false", "ttl": 3600 },
+  { "domain": "logging.level", "qtype": 16, "value": "DEBUG", "ttl": 1800 },
+  { "domain": "analytics.endpoint", "qtype": 16, "value": "https://analytics.internal/api", "ttl": 1800 },
+  { "domain": "messaging.rabbitmq", "qtype": 16, "value": "rabbit1:5672,rabbit2:5672", "ttl": 600 }
+]

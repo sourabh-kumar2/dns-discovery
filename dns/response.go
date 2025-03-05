@@ -81,6 +81,11 @@ func BuildDNSResponse(ctx context.Context, questions []internal.Question, header
 			logger.LogWithContext(ctx, zap.InfoLevel, "No record found for domain name: NXDOMAIN", zap.String("domain", q.DomainName))
 			continue
 		}
+		logger.LogWithContext(ctx, zap.DebugLevel, "cache hit",
+			zap.String("domain", q.DomainName),
+			zap.Uint16("qtype", q.QType),
+			zap.Any("record", record),
+		)
 
 		header.ANCount++
 
