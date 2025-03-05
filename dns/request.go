@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/sourabh-kumar2/dns-discovery/dns/internal"
-
 	"github.com/sourabh-kumar2/dns-discovery/logger"
 	"go.uber.org/zap"
 )
