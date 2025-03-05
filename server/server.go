@@ -1,4 +1,7 @@
-// Package server blah.
+// Package server implements a UDP-based DNS server.
+//
+// It listens for DNS queries, processes incoming packets, and sends responses.
+// The server supports graceful shutdown and concurrent request handling.
 package server
 
 import (
@@ -15,15 +18,26 @@ import (
 	"go.uber.org/zap"
 )
 
-// Server type.
+// Server represents a UDP-based DNS server.
+//
+// It listens for DNS queries, processes them using a resolver, and sends responses.
 type Server struct {
-	conn     *net.UDPConn
-	done     chan struct{}
-	wg       sync.WaitGroup
-	resolver *dns.Resolver
+	conn     *net.UDPConn   // UDP connection for handling requests
+	done     chan struct{}  // Channel to signal server shutdown
+	wg       sync.WaitGroup // WaitGroup to track active requests
+	resolver *dns.Resolver  // Resolver to process incoming queries
 }
 
-// NewServer instance.
+// NewServer initializes and returns a new DNS server.
+//
+// Parameters:
+// - addr: The IP address to bind the server to.
+// - port: The UDP port to listen on.
+// - resolver: The resolver responsible for handling DNS queries.
+//
+// Returns:
+// - A pointer to the initialized Server instance.
+// - An error if the server fails to start.
 func NewServer(addr string, port int, resolver *dns.Resolver) (*Server, error) {
 	udpAddr := &net.UDPAddr{
 		IP:   net.ParseIP(addr),
@@ -47,6 +61,9 @@ func NewServer(addr string, port int, resolver *dns.Resolver) (*Server, error) {
 	}, nil
 }
 
+// handleIncomingMessages continuously listens for incoming UDP packets and processes them.
+//
+// It spawns a new goroutine for each request to allow concurrent processing.
 func (s *Server) handleIncomingMessages(ctx context.Context) {
 	buf := make([]byte, 1024)
 	for {
@@ -77,7 +94,9 @@ func (s *Server) handleIncomingMessages(ctx context.Context) {
 	}
 }
 
-// Start the server.
+// Start begins listening for incoming DNS requests and processing them.
+//
+// This function should be called as a goroutine to allow for asynchronous operation.
 func (s *Server) Start(ctx context.Context) {
 	defer func() {
 		close(s.done)
@@ -92,6 +111,14 @@ func (s *Server) Start(ctx context.Context) {
 	s.handleIncomingMessages(ctx)
 }
 
+// processPacket handles a single DNS query from a client.
+//
+// It parses the query, resolves it using the configured resolver, and sends a response.
+//
+// Parameters:
+// - ctx: The request context.
+// - addr: The address of the client sending the request.
+// - buf: The raw DNS query data.
 func (s *Server) processPacket(ctx context.Context, addr *net.UDPAddr, buf []byte) {
 	defer s.wg.Done()
 
@@ -111,7 +138,9 @@ func (s *Server) processPacket(ctx context.Context, addr *net.UDPAddr, buf []byt
 	logger.LogWithContext(ctx, zap.InfoLevel, "DNS response written to UDP")
 }
 
-// Stop the server.
+// Stop gracefully shuts down the server.
+//
+// It waits for all active request handlers to finish before terminating.
 func (s *Server) Stop() {
 	<-s.done
 
