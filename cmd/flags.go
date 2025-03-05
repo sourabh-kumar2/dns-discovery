@@ -17,8 +17,8 @@ type flags struct {
 func parseFlags() *flags {
 	f := &flags{}
 
-	flag.StringVar(&f.address, "a", "127.0.0.1", "IP address to bind the DNS server")
-	flag.IntVar(&f.port, "p", 8053, "Port number to listen on")
+	flag.StringVar(&f.address, "address", "127.0.0.1", "IP address to bind the DNS server")
+	flag.IntVar(&f.port, "port", 8053, "Port number to listen on")
 	flag.BoolVar(&f.debug, "debug", false, "Enable debug logging (set flag without value to enable)")
 	flag.StringVar(&f.filename, "filename", "records.json", "Path to DNS records JSON file")
 	flag.IntVar(&f.interval, "interval", 30, "Cache refresh interval in seconds")

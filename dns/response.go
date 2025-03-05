@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/sourabh-kumar2/dns-discovery/discovery"
 	"github.com/sourabh-kumar2/dns-discovery/dns/internal"
@@ -25,6 +26,23 @@ const (
 	NXDomain = 0x0003
 )
 
+var (
+	bufferPool = sync.Pool{
+		New: func() interface{} {
+			return bytes.NewBuffer(make([]byte, 0, 512))
+		},
+	}
+)
+
+func getBuffer() *bytes.Buffer {
+	return bufferPool.Get().(*bytes.Buffer)
+}
+
+func putBuffer(buf *bytes.Buffer) {
+	buf.Reset()
+	bufferPool.Put(buf)
+}
+
 // BuildDNSResponse constructs a DNS response packet based on the query and header.
 //
 // This function does the following:
@@ -39,7 +57,7 @@ const (
 // Returns:
 //   - A byte slice representing the serialized DNS response packet.
 //   - An error if serialization fails.
-func BuildDNSResponse(ctx context.Context, questions []internal.Question, header *internal.Header, cache *discovery.Cache) ([]byte, error) {
+func BuildDNSResponse(ctx context.Context, questions []*internal.Question, header *internal.Header, cache *discovery.Cache) ([]byte, error) {
 	if len(questions) == 0 {
 		logger.LogWithContext(ctx, zap.ErrorLevel, "No questions provided")
 		return nil, errors.New("no questions provided")
@@ -50,7 +68,8 @@ func BuildDNSResponse(ctx context.Context, questions []internal.Question, header
 	header.ARCount = 0
 	header.NSCount = 0
 
-	buf := bytes.NewBuffer(make([]byte, 0, 512))
+	buf := getBuffer()
+	defer putBuffer(buf)
 
 	if err := binary.Write(buf, binary.BigEndian, header); err != nil {
 		logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write DNS header", zap.Error(err))

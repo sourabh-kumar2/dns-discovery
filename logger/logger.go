@@ -157,3 +157,8 @@ func CaptureLogs(f func()) []observer.LoggedEntry {
 	// Return captured logs
 	return logs.All()
 }
+
+// InitTestLogger for testing.
+func InitTestLogger() {
+	logger = zap.NewNop()
+}

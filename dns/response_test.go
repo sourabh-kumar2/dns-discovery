@@ -16,7 +16,7 @@ import (
 func TestBuildDNSResponse(t *testing.T) {
 	tcs := []struct {
 		name       string
-		questions  []internal.Question
+		questions  []*internal.Question
 		header     *internal.Header
 		cacheSetup func(*discovery.Cache)
 		expectErr  bool
@@ -24,7 +24,7 @@ func TestBuildDNSResponse(t *testing.T) {
 	}{
 		{
 			name: "Valid single-question response",
-			questions: []internal.Question{
+			questions: []*internal.Question{
 				{
 					DomainName: "example.com",
 					QType:      16, // TXT record
@@ -49,7 +49,7 @@ func TestBuildDNSResponse(t *testing.T) {
 		},
 		{
 			name: "Valid multiple-question response",
-			questions: []internal.Question{
+			questions: []*internal.Question{
 				{
 					DomainName: "example.com",
 					QType:      16,
@@ -80,7 +80,7 @@ func TestBuildDNSResponse(t *testing.T) {
 		},
 		{
 			name: "Cache miss (NXDOMAIN response)",
-			questions: []internal.Question{
+			questions: []*internal.Question{
 				{
 					DomainName: "unknown.com",
 					QType:      16,
@@ -103,7 +103,7 @@ func TestBuildDNSResponse(t *testing.T) {
 		},
 		{
 			name:       "No questions provided",
-			questions:  []internal.Question{},
+			questions:  []*internal.Question{},
 			header:     &internal.Header{TransactionID: 0x0001, Flags: 0x0100, QDCount: 0},
 			cacheSetup: func(_ *discovery.Cache) {},
 			expectErr:  true,

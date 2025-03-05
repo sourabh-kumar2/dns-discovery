@@ -14,7 +14,7 @@ import (
 
 // ParseQuery processes a raw DNS query packet.
 // It extracts the DNS header and all question sections, logging relevant details.
-func ParseQuery(ctx context.Context, data []byte) (*internal.Header, []internal.Question, error) {
+func ParseQuery(ctx context.Context, data []byte) (*internal.Header, []*internal.Question, error) {
 	if len(data) < internal.HeaderLength {
 		logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to parse DNS header",
 			zap.String("reason", "packet too short"),
@@ -31,7 +31,7 @@ func ParseQuery(ctx context.Context, data []byte) (*internal.Header, []internal.
 	logger.LogWithContext(ctx, zap.DebugLevel, "Parsed DNS header", zap.Any("header", header))
 
 	offset := uint16(internal.HeaderLength)
-	var questions []internal.Question
+	var questions []*internal.Question
 
 	for i := 0; i < int(header.QDCount); i++ {
 		question, newOffset, err := internal.ParseQuestion(data, offset)
@@ -41,7 +41,7 @@ func ParseQuery(ctx context.Context, data []byte) (*internal.Header, []internal.
 		}
 
 		logger.LogWithContext(ctx, zap.DebugLevel, "Parsed DNS question", zap.Int("questionIndex", i+1), zap.Any("question", question))
-		questions = append(questions, *question)
+		questions = append(questions, question)
 		offset = newOffset
 	}
 
