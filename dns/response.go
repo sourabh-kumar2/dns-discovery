@@ -50,26 +50,26 @@ func BuildDNSResponse(ctx context.Context, questions []internal.Question, header
 	header.ARCount = 0
 	header.NSCount = 0
 
-	var buf bytes.Buffer
+	buf := bytes.NewBuffer(make([]byte, 0, 512))
 
-	if err := binary.Write(&buf, binary.BigEndian, header); err != nil {
+	if err := binary.Write(buf, binary.BigEndian, header); err != nil {
 		logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write DNS header", zap.Error(err))
 		return nil, fmt.Errorf("failed to write DNS header: %w", err)
 	}
 
 	domainOffsets := make(map[string]int)
 	for _, q := range questions {
-		if err := encodeDomainName(&buf, q.DomainName, domainOffsets); err != nil {
+		if err := encodeDomainName(buf, q.DomainName, domainOffsets); err != nil {
 			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write Domain", zap.Error(err))
 			return nil, fmt.Errorf("failed to write Domain: %w", err)
 		}
 
 		// Write QType and QClass.
-		if err := binary.Write(&buf, binary.BigEndian, q.QType); err != nil {
+		if err := binary.Write(buf, binary.BigEndian, q.QType); err != nil {
 			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write QType", zap.Error(err))
 			return nil, fmt.Errorf("failed to write QType: %w", err)
 		}
-		if err := binary.Write(&buf, binary.BigEndian, q.QClass); err != nil {
+		if err := binary.Write(buf, binary.BigEndian, q.QClass); err != nil {
 			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write QClass", zap.Error(err))
 			return nil, fmt.Errorf("failed to write QClass: %w", err)
 		}
@@ -89,19 +89,19 @@ func BuildDNSResponse(ctx context.Context, questions []internal.Question, header
 
 		header.ANCount++
 
-		if err := encodeDomainName(&buf, q.DomainName, domainOffsets); err != nil {
+		if err := encodeDomainName(buf, q.DomainName, domainOffsets); err != nil {
 			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write Domain", zap.Error(err))
 			return nil, fmt.Errorf("failed to write Domain: %w", err)
 		}
-		if err := binary.Write(&buf, binary.BigEndian, q.QType); err != nil {
+		if err := binary.Write(buf, binary.BigEndian, q.QType); err != nil {
 			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write QType", zap.Error(err))
 			return nil, fmt.Errorf("failed to write QType: %w", err)
 		}
-		if err := binary.Write(&buf, binary.BigEndian, q.QClass); err != nil {
+		if err := binary.Write(buf, binary.BigEndian, q.QClass); err != nil {
 			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write QClass", zap.Error(err))
 			return nil, fmt.Errorf("failed to write QClass: %w", err)
 		}
-		if err := binary.Write(&buf, binary.BigEndian, uint32(record.TTL)); err != nil {
+		if err := binary.Write(buf, binary.BigEndian, uint32(record.TTL)); err != nil {
 			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write TTL", zap.Error(err))
 			return nil, fmt.Errorf("failed to write TTL: %w", err)
 		}
@@ -121,7 +121,7 @@ func BuildDNSResponse(ctx context.Context, questions []internal.Question, header
 		}
 
 		// Write RDLENGTH
-		if err := binary.Write(&buf, binary.BigEndian, uint16(rdataBuf.Len())); err != nil {
+		if err := binary.Write(buf, binary.BigEndian, uint16(rdataBuf.Len())); err != nil {
 			logger.LogWithContext(ctx, zap.ErrorLevel, "Failed to write RDLENGTH", zap.Error(err))
 			return nil, fmt.Errorf("failed to write RDLENGTH: %w", err)
 		}

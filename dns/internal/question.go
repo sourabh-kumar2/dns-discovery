@@ -8,21 +8,19 @@ import (
 
 var (
 	validQTypes = map[uint16]bool{
-		1:   true, // A
-		2:   true, // NS
-		5:   true, // CNAME
-		6:   true, // SOA
-		15:  true, // MX
-		16:  true, // TXT
-		28:  true, // AAAA
-		255: true, // ANY (Wildcard Query)
+		1:  true, // A
+		2:  true, // NS
+		5:  true, // CNAME
+		6:  true, // SOA
+		15: true, // MX
+		16: true, // TXT
+		28: true, // AAAA
 	}
 
 	validQClasses = map[uint16]bool{
-		1:   true, // IN (Internet)
-		3:   true, // CH (Chaosnet)
-		4:   true, // HS (Hesiod)
-		255: true, // ANY (Wildcard Query)
+		1: true, // IN (Internet)
+		3: true, // CH (Chaosnet)
+		4: true, // HS (Hesiod)
 	}
 )
 
