@@ -75,11 +75,11 @@ dig @127.0.0.1 -p 8053 example.com TXT
 ---
 
 ## **⚙️ Available Flags**
-| Flag | Description | Default      |
-|------|-------------|--------------|
-| `-address` | IP address the server binds to | `127.0.0.1`  |
-| `-p` | Port number for the DNS server | `8053`       |
-| `-debug` | Enable debug mode (logs to console) | `false`      |
+| Flag        | Description | Default      |
+|-------------|-------------|--------------|
+| `-address`  | IP address the server binds to | `127.0.0.1`  |
+| `-port`     | Port number for the DNS server | `8053`       |
+| `-debug`    | Enable debug mode (logs to console) | `false`      |
 | `-filename` |    Path to DNS records JSON file | `records.json` |
 | `-interval` |    Cache refresh interval in seconds | `30`         |
 
