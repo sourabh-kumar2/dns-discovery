@@ -1,4 +1,4 @@
-package response
+package dns
 
 import (
 	"context"
@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sourabh-kumar2/dns-discovery/dns/internal"
+
 	"github.com/sourabh-kumar2/dns-discovery/discovery"
-	"github.com/sourabh-kumar2/dns-discovery/dns"
 	"github.com/sourabh-kumar2/dns-discovery/logger"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,22 +16,22 @@ import (
 func TestBuildDNSResponse(t *testing.T) {
 	tcs := []struct {
 		name       string
-		questions  []dns.Question
-		header     *dns.Header
+		questions  []internal.Question
+		header     *internal.Header
 		cacheSetup func(*discovery.Cache)
 		expectErr  bool
 		validate   func(t *testing.T, response []byte)
 	}{
 		{
 			name: "Valid single-question response",
-			questions: []dns.Question{
+			questions: []internal.Question{
 				{
 					DomainName: "example.com",
 					QType:      16, // TXT record
 					QClass:     1,  // IN (Internet)
 				},
 			},
-			header: &dns.Header{
+			header: &internal.Header{
 				TransactionID: 0x1234,
 				Flags:         0x0100, // QR = 0 (query)
 				QDCount:       1,
@@ -48,7 +49,7 @@ func TestBuildDNSResponse(t *testing.T) {
 		},
 		{
 			name: "Valid multiple-question response",
-			questions: []dns.Question{
+			questions: []internal.Question{
 				{
 					DomainName: "example.com",
 					QType:      16,
@@ -60,7 +61,7 @@ func TestBuildDNSResponse(t *testing.T) {
 					QClass:     1,
 				},
 			},
-			header: &dns.Header{
+			header: &internal.Header{
 				TransactionID: 0x5678,
 				Flags:         0x0100,
 				QDCount:       2,
@@ -79,14 +80,14 @@ func TestBuildDNSResponse(t *testing.T) {
 		},
 		{
 			name: "Cache miss (NXDOMAIN response)",
-			questions: []dns.Question{
+			questions: []internal.Question{
 				{
 					DomainName: "unknown.com",
 					QType:      16,
 					QClass:     1,
 				},
 			},
-			header: &dns.Header{
+			header: &internal.Header{
 				TransactionID: 0x9999,
 				Flags:         0x0100,
 				QDCount:       1,
@@ -102,8 +103,8 @@ func TestBuildDNSResponse(t *testing.T) {
 		},
 		{
 			name:       "No questions provided",
-			questions:  []dns.Question{},
-			header:     &dns.Header{TransactionID: 0x0001, Flags: 0x0100, QDCount: 0},
+			questions:  []internal.Question{},
+			header:     &internal.Header{TransactionID: 0x0001, Flags: 0x0100, QDCount: 0},
 			cacheSetup: func(_ *discovery.Cache) {},
 			expectErr:  true,
 			validate:   nil,

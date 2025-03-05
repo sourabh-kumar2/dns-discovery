@@ -13,11 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sourabh-kumar2/dns-discovery/discovery"
-	"github.com/sourabh-kumar2/dns-discovery/dns/response"
-
 	"github.com/google/uuid"
 	"github.com/sourabh-kumar2/dns-discovery/config"
+	"github.com/sourabh-kumar2/dns-discovery/discovery"
 	"github.com/sourabh-kumar2/dns-discovery/dns"
 	"github.com/sourabh-kumar2/dns-discovery/logger"
 	"go.uber.org/zap"
@@ -131,7 +129,7 @@ func processPacket(ctx context.Context, conn *net.UDPConn, addr *net.UDPAddr, ca
 
 	ctx = logger.WithTransactionID(ctx, header.TransactionID)
 
-	dnsResponse, err := response.BuildDNSResponse(ctx, questions, header, cache)
+	dnsResponse, err := dns.BuildDNSResponse(ctx, questions, header, cache)
 	if err != nil {
 		logger.Log(zap.WarnLevel, "Error building DNS response", zap.Error(err))
 		return

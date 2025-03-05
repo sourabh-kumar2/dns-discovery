@@ -1,4 +1,4 @@
-package dns
+package internal
 
 import (
 	"encoding/hex"
@@ -65,7 +65,7 @@ func TestParseDNSHeader(t *testing.T) {
 			data, err := hex.DecodeString(tc.hexInput)
 			assert.NoError(t, err, "Failed to decode hex input")
 
-			header, err := parseDNSHeader(data)
+			header, err := ParseHeader(data)
 
 			if tc.expectErr {
 				assert.Error(t, err, "Expected error but got nil")

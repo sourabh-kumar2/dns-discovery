@@ -1,4 +1,4 @@
-package dns
+package internal
 
 import (
 	"testing"
@@ -129,7 +129,7 @@ func TestParseDNSQuestion(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			q, _, err := parseDNSQuestion(tc.data, tc.offset)
+			q, _, err := ParseQuestion(tc.data, tc.offset)
 			if (err != nil) != tc.expectErr {
 				t.Errorf("Unexpected error: %v", err)
 			}

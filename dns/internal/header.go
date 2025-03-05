@@ -1,8 +1,14 @@
-package dns
+// Package internal implements core dns protocol
+package internal
 
 import (
 	"encoding/binary"
 	"fmt"
+)
+
+const (
+	// HeaderLength The DNS header consists of 12 bytes and contains important fields fixed 12.
+	HeaderLength = 12
 )
 
 // Header represents the DNS message header.
@@ -26,7 +32,7 @@ type Header struct {
 	ARCount       uint16 // Number of additional records
 }
 
-// parseDNSHeader parses the DNS packet header from the given byte slice.
+// ParseHeader parses the DNS packet header from the given byte slice.
 // It ensures the packet is at least 12 bytes long (DNS header size) and extracts the header fields.
 //
 // Validation:
@@ -36,8 +42,8 @@ type Header struct {
 // Returns:
 // - A pointer to the parsed Header struct if successful.
 // - An error if the packet is too short or has an invalid QDCount.
-func parseDNSHeader(data []byte) (*Header, error) {
-	if len(data) < headerLength {
+func ParseHeader(data []byte) (*Header, error) {
+	if len(data) < HeaderLength {
 		return nil, fmt.Errorf("invalid DNS packet, too short")
 	}
 

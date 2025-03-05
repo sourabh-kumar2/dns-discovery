@@ -1,9 +1,4 @@
-// Package response constructs DNS response packets.
-//
-// This package is responsible for generating DNS responses based on parsed queries.
-// It modifies the DNS header to indicate a response, includes the question section,
-// and will eventually handle answer section generation.
-package response
+package dns
 
 import (
 	"bytes"
@@ -14,8 +9,7 @@ import (
 	"strings"
 
 	"github.com/sourabh-kumar2/dns-discovery/discovery"
-
-	"github.com/sourabh-kumar2/dns-discovery/dns"
+	"github.com/sourabh-kumar2/dns-discovery/dns/internal"
 	"github.com/sourabh-kumar2/dns-discovery/logger"
 	"go.uber.org/zap"
 )
@@ -45,7 +39,7 @@ const (
 // Returns:
 //   - A byte slice representing the serialized DNS response packet.
 //   - An error if serialization fails.
-func BuildDNSResponse(ctx context.Context, questions []dns.Question, header *dns.Header, cache *discovery.Cache) ([]byte, error) {
+func BuildDNSResponse(ctx context.Context, questions []internal.Question, header *internal.Header, cache *discovery.Cache) ([]byte, error) {
 	if len(questions) == 0 {
 		logger.LogWithContext(ctx, zap.ErrorLevel, "No questions provided")
 		return nil, errors.New("no questions provided")

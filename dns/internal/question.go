@@ -1,4 +1,4 @@
-package dns
+package internal
 
 import (
 	"encoding/binary"
@@ -41,7 +41,7 @@ type Question struct {
 	QClass     uint16 // The class of the query, typically IN (1)
 }
 
-// parseDNSQuestion parses a DNS question section, handling compression if present.
+// ParseQuestion parses a DNS question section, handling compression if present.
 //
 // Parameters:
 // - data: The raw DNS packet.
@@ -51,7 +51,7 @@ type Question struct {
 // - A pointer to the parsed Question struct.
 // - The new offset after parsing.
 // - An error if parsing fails.
-func parseDNSQuestion(data []byte, offset uint16) (*Question, uint16, error) {
+func ParseQuestion(data []byte, offset uint16) (*Question, uint16, error) {
 	maxLen := uint16(len(data))
 
 	domainName, newOffset, err := decodeDomainName(data, offset)
