@@ -96,5 +96,5 @@ This project is open-source and available under the **MIT License**.
 ---
 
 ## **📢 Contributors**
-Developed and maintained by **[Your Name]**. Feel free to contribute and improve!
+Developed and maintained by **Sourabh Kumar**. Feel free to contribute and improve!
 
