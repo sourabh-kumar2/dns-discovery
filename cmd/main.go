@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -11,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sourabh-kumar2/dns-discovery/config"
 	"github.com/sourabh-kumar2/dns-discovery/discovery"
 	"github.com/sourabh-kumar2/dns-discovery/dns"
 	"github.com/sourabh-kumar2/dns-discovery/logger"
@@ -27,23 +25,23 @@ func init() {
 }
 
 func main() {
-	configPath := flag.String("config", "cmd/server/config.json", "Path to configuration file")
-	flag.Parse()
-
-	cfg, err := config.NewConfig(*configPath)
-	if err != nil {
-		logger.Log(zap.FatalLevel, "Failed to initialize config", zap.Error(err))
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	flg := parseFlags()
+
+	logger.Log(zap.InfoLevel, "Reading configuration",
+		zap.String("address", flg.address),
+		zap.Int("port", flg.port),
+		zap.Bool("debug", flg.debug),
+	)
 
 	cache := discovery.NewCache()
 	cache.Set("example.com", 1, []byte{127, 0, 0, 2}, 300*time.Second)
 	cache.Set("example.com", 16, []byte("example text"), 300*time.Second)
 	resolver := dns.NewResolver(cache)
 
-	srv, err := server.NewServer(cfg.Server.Address, cfg.Server.Port, resolver)
+	srv, err := server.NewServer(flg.address, flg.port, resolver)
 	if err != nil {
 		logger.Log(zap.FatalLevel, "Failed to initialize server", zap.Error(err))
 	}
